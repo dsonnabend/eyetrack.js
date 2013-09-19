@@ -1,239 +1,241 @@
 
-// Modul Eyetrack
-var Eyetrack = function() {
+"use strict";
 
-	var date = new Date();
+/*jslint browser:true */
+/*jslint plusplus: true */
+/*global CanvasRenderingContext2D:false */
 
-	var starKernel = [
-	                  [0,1,0],
-	                  [1,1,1],
-	                  [0,1,0],
-	                 ];
-	
-	var discKernel = [
-	                  [-1,0,-1],
-	                  [-1,0,-1],
-	                  [-1,0,-1],
-	                 ];
+/* Modul Eyetrack */
+var Eyetrack = function () {
 
-	// Variablen
-	var video 		= document.querySelector('video');
+        /* Variablen deklarieren */
+        var date,
+            starKernel,
+            discKernel,
+            video,
+            cvFirst,
+            cvSecond,
+            cvThird,
+            ctxFirst,
+            ctxSecond,
+            ctxThird,
+            video_constraints,
+            stream,
+            idFirst,
+            idSecond,
+            that,
+            connect_objects;
 
-	// Zeichenflächen
-	var cvFirst 	= document.querySelector('.cvFirst');
-	var cvSecond 	= document.querySelector('.cvSecond');
-	var cvThird 	= document.querySelector('.cvThird');
+        /* Variablen initialiseren */
+        that = this;
+        date = new Date();
+        starKernel = [ [ 0, 1, 0], [ 1, 1, 1], [ 0, 1, 0] ];
+        discKernel = [ [ -1, 0, -1], [ -1, 0, -1], [ -1, 0, -1] ];
+        video = document.querySelector('video');
 
-	// Graphicscontexte
-	var ctxFirst 	= cvFirst.getContext('2d');
-	var ctxSecond 	= cvSecond.getContext('2d');
-	var ctxThird 	= cvThird.getContext('2d');
+        cvFirst = document.querySelector('.cvFirst');
+        cvSecond = document.querySelector('.cvSecond');
+        cvThird = document.querySelector('.cvThird');
 
-	var video_constraints = {
-	   mandatory: {
-	       maxHeight: 640,
-	       maxWidth: 480 
-	   },
-	   optional: []
-	};
+        ctxFirst = cvFirst.getContext('2d');
+        ctxSecond = cvSecond.getContext('2d');
+        ctxThird  = cvThird.getContext('2d');
 
-	var stream 		= null;
+        video_constraints = {
+            mandatory: {
+                maxHeight: 640,
+                maxWidth: 480
+            },
+            optional: []
+        };
 
-	// ImageData für Bildbearbeitung
-	var idFirst 	= null;
-	var idSecond 	= null;
+        stream = null;
+        idFirst = null;
+        idSecond = null;
 
-	// Einfacher Fehlerhandler
-	var handleError = function(error) {
-		console.log('Reeeejected!', error);
-	};
+        window.requestAnimFrame = (function () {
+            return window.requestAnimationFrame ||
+                window.webkitRequestAnimationFrame ||
+                window.mozRequestAnimationFrame    ||
+                function (callback) {
+                    window.setTimeout(callback, 1000 / 60);
+                };
+        }());
 
-	// shim layer with setTimeout fallback
-	window.requestAnimFrame = (function(){
-	  return  window.requestAnimationFrame       ||
-	          window.webkitRequestAnimationFrame ||
-	          window.mozRequestAnimationFrame    ||
-	          function( callback ){
-	            window.setTimeout(callback, 1000 / 60);
-	          };
-	})();
+        CanvasRenderingContext2D.prototype.erode = function (B) {
 
+            var A_ImageData,
+                data,
+                width,
+                height,
+                y1_width,
+                y2_width,
+                y3_width,
+                index,
+                x,
+                y;
 
-	// CanvasRenderingContext2D#getImageData()
-	CanvasRenderingContext2D.prototype.getAllImageData = function() {
-		return this.getImageData(0,0,this.canvas.width, this.canvas.height);
-	};
-	
-	// CanvasRenderingContext2D#erode 
-	CanvasRenderingContext2D.prototype.erode = function(B) {
-		
-		var start = (new Date).getTime();
+            A_ImageData = this.getImageData(0, 0, 640, 480);
 
-		var A_ImageData = this.getAllImageData();
+            data  = A_ImageData.data;
+            width   = A_ImageData.width;
+            height  = A_ImageData.height;
 
-		var data 	= A_ImageData.data;
-		var width 	= A_ImageData.width;
-		var height 	= A_ImageData.height;
+            for (x = 1; x < width; ++x) {
+                for (y = 1; y < height; ++y) {
 
-		var b1 = B[0][0];
-		var b2 = B[0][1];
-		var b3 = B[0][2];
+                    y1_width = (y - 1) * width;
+                    y2_width = y * width;
+                    y3_width = (y + 1) * width;
 
-		var b4 = B[1][0];
-		var b5 = B[1][1];
-		var b6 = B[1][2];
+                    index = (y * width + x) * 4;
 
-		var b7 = B[2][0]; 
-		var b8 = B[2][1]; 
-		var b9 = B[2][2];
+                    data[(x  + y2_width) * 4] =
+                        data[(x - 1 + y1_width) * 4] * B[0][0] +
+                        data[(x - 1 + y2_width) * 4] * B[0][1] +
+                        data[(x - 1 + y3_width) * 4] * B[0][2] +
 
-		for (var x = 1; x < A_ImageData.width; ++x) {
-			for (var y = 1; y < A_ImageData.height; ++y) {
+                        data[(x   + y1_width) * 4] *  B[1][0] +
+                        data[(x   + y2_width) * 4] *  B[1][1] +
+                        data[(x   + y3_width) * 4] *  B[1][2] +
 
-				var y1_width = (y-1) * width;
-				var y2_width = y * width;
-				var y3_width = (y+1)* width;
-
-				var index = (y * width + x) * 4;
-
-				data[(x  + y2_width) * 4] = 
-					data[(x - 1 + y1_width) * 4] * b1 +
-					data[(x - 1 + y2_width) * 4] * b2 +
-					data[(x - 1 + y3_width) * 4] * b3 +
-
-					data[(x 	+ y1_width) * 4] *  b4 + 
-					data[(x 	+ y2_width) * 4] *  b5 +
-					data[(x 	+ y3_width) * 4] *  b6 +
-
-					data[(x + 1 + y1_width) * 4] * b7 +
-					data[(x + 1 + y2_width) * 4] * b8 +
-					data[(x + 1 + y3_width)	* 4] * b9; 
-			};
-		};
-
-		console.log("#erode took: %d ms", (new Date).getTime() - start);
-	};
-
-	// ImageData#treshold
-	CanvasRenderingContext2D.prototype.treshold = function(B) {
-		
-		var A_ImageData = this.getAllImageData();
-		var B_ImageData = B.getAllImageData();
-
-		var height = A_ImageData.height;
-		var width  = A_ImageData.width;
-
-		console.log("this.canvas.height = %d, this.canvas.width = %d", height, width);
-
-		var output = this.canvas.getContext('2d').createImageData(width,height);
+                        data[(x + 1 + y1_width) * 4] * B[2][0] +
+                        data[(x + 1 + y2_width) * 4] * B[2][1] +
+                        data[(x + 1 + y3_width) * 4] * B[2][2];
+                }
+            }
+        };
 
 
-		var ubound = width * height * 4;
+        CanvasRenderingContext2D.prototype.treshold = function (B) {
 
-		// Subtract images, discard alpha channel (modulo 4 Operation).
-		for ( var i = 0; i < ubound; i++) {
-			if (i % 4 < 3) {
-				
-				output.data[i] = A_ImageData.data[i] - B_ImageData.data[i];
+            var A_ImageData, B_ImageData, height, width, output, ubound, i, output_data, aimage_data, bimage_data;
 
-				// Treshold image
-				output.data[i] = (output.data[i] > 30) ? 255 : 0;
-
-			} else {
-				output.data[i] = A_ImageData.data[i];
-			}
-			;
-
-		}
-		;
-
-		return output;
-	}
+            A_ImageData = this.getImageData(0, 0, 640, 480);
+            B_ImageData = B.getImageData(0, 0, 640, 480);
 
 
-	// Findet Objekte (Augen) im Bild
-	var connect_objects = function(ctx) {
-		var image_data = ctx.getAllImageData();
+            height = A_ImageData.height;
+            width  = A_ImageData.width;
+
+/*            width = 640;
+            height = 320;*/
+
+            output = this.canvas.getContext('2d').createImageData(width, height);
+            ubound = width * height * 4;
+
+            output_data = output.data;
+            aimage_data = A_ImageData.data;
+            bimage_data = B_ImageData.data;
+
+            /* Subtract images, discard alpha channel (modulo 4 Operation). */
+            for (i = 0; i < ubound; i++) {
+
+                if (i % 4 < 3) {
+                  output_data[i] = (aimage_data[i] - bimage_data[i]) > 30 ? 255 : 0;
+                } else {
+                    output_data[i] = aimage_data[i];
+                }
+            }
+
+            return output;
+        };
+
+        // CanvasRenderingContext2D.prototype.treshold = function (B) {
+        //     var width, height, x, y, adata, bdata;
+
+        //     width = 640;
+        //     height = 480;
+
+        //     for (x = 0; x < width; x++) {
+        //         for (y = 0; y < height; y++) {
+        //             adata = this.getImageData(x, y, 1, 1).data;
+        //             //bdata = B.getImageData(x, y, 1, 1).data;
+
+        //             // adata[0] = (adata[0] - bdata[0]) > 30 ? 255 : 0;
+        //             // adata[1] = (adata[1] - bdata[1]) > 30 ? 255 : 0;
+        //             // adata[2] = (adata[2] - bdata[2]) > 30 ? 255 : 0;
+
+        //             // this.putImageData(adata, x, y);
+        //         }
+        //     }
+
+        // };
 
 
+        /* Findet Objekte (Augen) im Bild */
+        connect_objects = function (ctx) {
+            var image_data = ctx.getImageData(0, 0, 640, 480);
 
-	}
+        };
 
 
+        return {
 
+            initialize : function () {
+                window.URL        =
+                    window.URL ||
+                    window.webkitURL;
 
-	// Gebe Closure mit öffentlichen Methoden zurück.
-	return {
+                navigator.getUserMedia  =
+                    navigator.getUserMedia ||
+                    navigator.webkitGetUserMedia ||
+                    navigator.mozGetUserMedia ||
+                    navigator.msGetUserMedia;
 
-		// Initialisiert alle Variablen und den Mediastream,
-		// registriert die Snapshotfunktion
-		initialize : function() {
-			window.URL 				= 
-				window.URL || 
-				window.webkitURL;
-			
-			navigator.getUserMedia 	= 
-				navigator.getUserMedia 			|| 
-				navigator.webkitGetUserMedia 	|| 
-				navigator.mozGetUserMedia 		|| 
-				navigator.msGetUserMedia;
+                if (navigator.getUserMedia) {
+                    navigator.getUserMedia({
+                        video : video_constraints
+                    }, function (videoStream) {
+                        video.src = window.URL.createObjectURL(videoStream);
+                        stream = videoStream;
+                    });
+                } else {
+                    video.src = 'somevideo.webm';
+                }
 
-			if (navigator.getUserMedia) {
-				navigator.getUserMedia({
-					video : video_constraints
-				}, function(videoStream) {
-					video.src = window.URL.createObjectURL(videoStream);
-					stream = videoStream;
-				}, handleError);
+            },
 
-			} else {
-				video.src = 'somevideo.webm';
-			}
+            snapshot :  function () {
+                var img_data;
+                if (stream) {
 
-		},
-		
-		snapshot :  function() {
-			if (stream) {
+                    if (idFirst === false) {
+                        ctxFirst.drawImage(video, 0, 0, 640, 480);
+                        idFirst = true;
+                    } else {
+                        if (idSecond === false) {
+                            ctxSecond.drawImage(video, 0, 0, 640, 480);
+                            idSecond = true;
+                            //img_data = ctxFirst.treshold(ctxSecond);
+                            ctxFirst.treshold(ctxSecond);
+                            //ctxThird.putImageData(img_data, 0, 0, 0, 0, 640, 480);
+                            // ctxThird.drawImage(ctxFirst.treshold(ctxSecond),0,0,video_constraints.mandatory.maxWidth,video_constraints.mandatory.maxHeight);
 
-				// Wenn das erste Sample leer ist, fülle dies.
-				if (idFirst === false) {
-					ctxFirst.drawImage(video, 0, 0, 640, 480);
-					idFirst = true;
-				}
-				// Ansonsten schaue ob das zweite Sample leer ist, dann fülle dies.
-				else {
-					if (idSecond === false) {
-						ctxSecond.drawImage(video, 0, 0, 640, 480);
-						idSecond = true
-						// Treshold Image berechnen (Differenz & Treshold)
-						ctxThird.putImageData(ctxFirst.treshold(ctxSecond),0,0);
-						
-						// Open morphological operation (with a star-shaped kernel)
-						//ctxThird.erode( starKernel );
-						
-						connect_objects(ctxThird);
+                            // Open morphological operation (with a star-shaped kernel)
+                            ctxThird.erode(starKernel);
 
-					}
-					// Wenn beide Sample gef¸llt sind, dann lösche beide.
-					else {
-						idFirst  = false;
-						idSecond = false;
-					}
-					;
-				}
-				;
+                            connect_objects(ctxThird);
 
-			}
-		}
-	};
+                        } else {
+                            idFirst  = false;
+                            idSecond = false;
+                        }
+                    }
+                }
+            }
+        };
+    }();
 
-}();
-
-// Eyetrack initialisieren TODO: Initialisierung auslagern
+/* Eyetrack initialisieren */
 Eyetrack.initialize();
 
+var v = document.querySelector('video');
 
-(function animloop(){
-  requestAnimFrame(animloop);
-  Eyetrack.snapshot();
-})();
+(function animloop() {
+    window.requestAnimFrame(animloop);
+
+    if (v.readyState === v.HAVE_ENOUGH_DATA) {
+        Eyetrack.snapshot();
+    }
+}());

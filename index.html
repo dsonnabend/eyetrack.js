@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <head>
-	<title>eyetrack.js</title>
-	
+	<title>eyetrack.coffee</title>
+
+
 </head>
 
 <body>
-  
-	<video autoplay style="width: 640px; height: 480px; border: 1px solid"></video>
-	<canvas class="cvThird" style="width: 640px; height: 480px; border: 1px solid; -webkit-filter: grayscale(1)"></canvas>
-	<canvas class="cvFirst" style="visibility: hidden; width: 640px; height: 480px; border: 1px solid; -webkit-filter: grayscale(1)" ></canvas>
-	<canvas class="cvSecond" style="visibility: hidden; width: 640px; height: 480px; border: 1px solid; -webkit-filter: grayscale(1)"></canvas>
-	
-	<script src="eyetrack.js"></script>
+
+	<video autoplay style="border: 1px solid; width:320px; height: 240px" width="640px" height="480px"></video>
+  <!-- <video autoplay style="width: 320px; height: 240px; border: 1px solid"></video> -->
+	<canvas class="cvFirst" style="border: 1px solid; width:320px; height: 240px;" width="640px" height="480px"></canvas>
+	<canvas class="cvSecond" style="border: 1px solid; width:320px; height: 240px;" width="640px" height="480px"></canvas>
+	<canvas class="cvThird" style="border: 1px solid; width:320px; height: 240px; -webkit-filter: grayscale(1); " width="640px" height="480px"></canvas>
+	<!-- <script type="text/coffeescript" src="eyetrack.coffee" > </script>
+	<script src="coffee-script.js"></script> -->
+
+  <script src="eyetrack.js" > </script>
+
+
 </body>
 </html>
