@@ -1,21 +1,20 @@
 <!DOCTYPE html>
 <head>
-	<title>eyetrack.coffee</title>
+	<title>eyetrack.js</title>
 
 
 </head>
 
 <body>
 
-	<video autoplay style="border: 1px solid; width:320px; height: 240px" width="640px" height="480px"></video>
-  <!-- <video autoplay style="width: 320px; height: 240px; border: 1px solid"></video> -->
+  <video autoplay id="video" style="display: none" ></video>
 	<canvas class="cvFirst" style="border: 1px solid; width:320px; height: 240px;" width="640px" height="480px"></canvas>
 	<canvas class="cvSecond" style="border: 1px solid; width:320px; height: 240px;" width="640px" height="480px"></canvas>
 	<canvas class="cvThird" style="border: 1px solid; width:320px; height: 240px; -webkit-filter: grayscale(1); " width="640px" height="480px"></canvas>
-	<!-- <script type="text/coffeescript" src="eyetrack.coffee" > </script>
-	<script src="coffee-script.js"></script> -->
 
-  <script src="eyetrack.js" > </script>
+  <script src="crockford.js" ></script>
+  <script src="compatibility.js"></script>
+  <script src="eyetrack.js" ></script>
 
 
 </body>
