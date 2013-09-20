@@ -24,14 +24,14 @@ var Eyetrack = function () {
             idFirst,
             idSecond,
             that,
-            connect_objects;
+            connect_objects,
+            tick,
+            initialize;
 
         /* Variablen initialiseren */
-        that = this;
-        date = new Date();
         starKernel = [ [ 0, 1, 0], [ 1, 1, 1], [ 0, 1, 0] ];
         discKernel = [ [ -1, 0, -1], [ -1, 0, -1], [ -1, 0, -1] ];
-        video = document.querySelector('video');
+        video = document.getElementById('video');
 
         cvFirst = document.querySelector('.cvFirst');
         cvSecond = document.querySelector('.cvSecond');
@@ -41,28 +41,12 @@ var Eyetrack = function () {
         ctxSecond = cvSecond.getContext('2d');
         ctxThird  = cvThird.getContext('2d');
 
-        video_constraints = {
-            mandatory: {
-                maxHeight: 640,
-                maxWidth: 480
-            },
-            optional: []
-        };
-
         stream = null;
         idFirst = null;
         idSecond = null;
 
-        window.requestAnimFrame = (function () {
-            return window.requestAnimationFrame ||
-                window.webkitRequestAnimationFrame ||
-                window.mozRequestAnimationFrame    ||
-                function (callback) {
-                    window.setTimeout(callback, 1000 / 60);
-                };
-        }());
 
-        CanvasRenderingContext2D.prototype.erode = function (B) {
+        CanvasRenderingContext2D.method("erode", function (B) {
 
             var A_ImageData,
                 data,
@@ -104,12 +88,12 @@ var Eyetrack = function () {
                         data[(x + 1 + y3_width) * 4] * B[2][2];
                 }
             }
-        };
+        });
 
 
-        CanvasRenderingContext2D.prototype.treshold = function (B) {
+        CanvasRenderingContext2D.method("treshold", function (B, output) {
 
-            var A_ImageData, B_ImageData, height, width, output, ubound, i, output_data, aimage_data, bimage_data;
+            var A_ImageData, B_ImageData, height, width, ubound, i, output_data, aimage_data, bimage_data;
 
             A_ImageData = this.getImageData(0, 0, 640, 480);
             B_ImageData = B.getImageData(0, 0, 640, 480);
@@ -121,7 +105,7 @@ var Eyetrack = function () {
 /*            width = 640;
             height = 320;*/
 
-            output = this.canvas.getContext('2d').createImageData(width, height);
+
             ubound = width * height * 4;
 
             output_data = output.data;
@@ -132,14 +116,12 @@ var Eyetrack = function () {
             for (i = 0; i < ubound; i++) {
 
                 if (i % 4 < 3) {
-                  output_data[i] = (aimage_data[i] - bimage_data[i]) > 30 ? 255 : 0;
+                    output_data[i] = (aimage_data[i] - bimage_data[i]) > 30 ? 255 : 0;
                 } else {
                     output_data[i] = aimage_data[i];
                 }
             }
-
-            return output;
-        };
+        });
 
         // CanvasRenderingContext2D.prototype.treshold = function (B) {
         //     var width, height, x, y, adata, bdata;
@@ -169,34 +151,16 @@ var Eyetrack = function () {
 
         };
 
-
         return {
+            initialize: function () {
 
-            initialize : function () {
-                window.URL        =
-                    window.URL ||
-                    window.webkitURL;
-
-                navigator.getUserMedia  =
-                    navigator.getUserMedia ||
-                    navigator.webkitGetUserMedia ||
-                    navigator.mozGetUserMedia ||
-                    navigator.msGetUserMedia;
-
-                if (navigator.getUserMedia) {
-                    navigator.getUserMedia({
-                        video : video_constraints
-                    }, function (videoStream) {
-                        video.src = window.URL.createObjectURL(videoStream);
-                        stream = videoStream;
-                    });
-                } else {
-                    video.src = 'somevideo.webm';
-                }
-
+                navigator.getUserMedia({ video : true }, function (videoStream) {
+                    video.src = window.URL.createObjectURL(videoStream);
+                    stream = videoStream;
+                });
             },
 
-            snapshot :  function () {
+            tick: function () {
                 var img_data;
                 if (stream) {
 
@@ -207,10 +171,12 @@ var Eyetrack = function () {
                         if (idSecond === false) {
                             ctxSecond.drawImage(video, 0, 0, 640, 480);
                             idSecond = true;
-                            //img_data = ctxFirst.treshold(ctxSecond);
-                            ctxFirst.treshold(ctxSecond);
-                            //ctxThird.putImageData(img_data, 0, 0, 0, 0, 640, 480);
-                            // ctxThird.drawImage(ctxFirst.treshold(ctxSecond),0,0,video_constraints.mandatory.maxWidth,video_constraints.mandatory.maxHeight);
+                            img_data = ctxFirst.createImageData(640, 480);
+
+                            ctxFirst.treshold(ctxSecond, img_data);
+                            //ctxFirst.treshold(ctxSecond);
+                            ctxThird.putImageData(img_data, 0, 0, 0, 0, 640, 480);
+                            ctxThird.drawImage(ctxFirst.treshold(ctxSecond), 0, 0, video_constraints.mandatory.maxWidth, video_constraints.mandatory.maxHeight);
 
                             // Open morphological operation (with a star-shaped kernel)
                             ctxThird.erode(starKernel);
@@ -224,18 +190,20 @@ var Eyetrack = function () {
                     }
                 }
             }
+
         };
+
     }();
 
 /* Eyetrack initialisieren */
 Eyetrack.initialize();
 
-var v = document.querySelector('video');
+var v = document.getElementById("video");
 
-(function animloop() {
-    window.requestAnimFrame(animloop);
+var animloop = function animloop() {
+    window.requestAnimationFrame(animloop);
 
     if (v.readyState === v.HAVE_ENOUGH_DATA) {
-        Eyetrack.snapshot();
+        Eyetrack.tick();
     }
-}());
+}();
