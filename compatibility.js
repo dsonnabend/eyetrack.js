@@ -19,8 +19,7 @@ window.requestAnimationFrame =
 **/
 
 window.URL =
-    window.URL ||
-    window.webkitURL;
+    window.URL || window.webkitURL || window.mozURL || window.msURL;
 
 
 /**

@@ -2,7 +2,7 @@
 "use strict";
 
 /*jslint browser:true */
-/*jslint plusplus: true */
+/*jslint plusplus:true */
 /*global CanvasRenderingContext2D:false */
 
 /* Modul Eyetrack */
@@ -31,7 +31,7 @@ var Eyetrack = function () {
         /* Variablen initialiseren */
         starKernel = [ [ 0, 1, 0], [ 1, 1, 1], [ 0, 1, 0] ];
         discKernel = [ [ -1, 0, -1], [ -1, 0, -1], [ -1, 0, -1] ];
-        video = document.getElementById('video');
+        video = document.querySelector('video');
 
         cvFirst = document.querySelector('.cvFirst');
         cvSecond = document.querySelector('.cvSecond');
@@ -155,9 +155,15 @@ var Eyetrack = function () {
             initialize: function () {
 
                 navigator.getUserMedia({ video : true }, function (videoStream) {
-                    video.src = window.URL.createObjectURL(videoStream);
+                    if (video.mozSrcObject !== undefined) {
+						video.mozSrcObject = videoStream;
+					} else {
+						video.src = (window.URL && window.URL.createObjectURL(stream)) || stream;
+					}
+					video.play();
+					
                     stream = videoStream;
-                });
+                }, function() { console.log('Error bei getUserMedia'); } );
             },
 
             tick: function () {
@@ -198,12 +204,12 @@ var Eyetrack = function () {
 /* Eyetrack initialisieren */
 Eyetrack.initialize();
 
-var v = document.getElementById("video");
+var v = document.querySelector('video');
 
 var animloop = function animloop() {
     window.requestAnimationFrame(animloop);
 
     if (v.readyState === v.HAVE_ENOUGH_DATA) {
-        Eyetrack.tick();
+		Eyetrack.tick();
     }
 }();
